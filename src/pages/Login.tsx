@@ -10,6 +10,7 @@ import { useNavigate } from "react-router-dom";
 import { useToast } from "@/hooks/use-toast";
 import Navbar from "@/components/Navbar";
 import Chatbot from "@/components/Chatbot";
+import { validateStrongPassword, validateEmail, validateRequired } from "@/utils/validation";
 
 const Login = () => {
   const navigate = useNavigate();
@@ -19,18 +20,38 @@ const Login = () => {
     password: "",
     userType: "",
   });
+  const [errors, setErrors] = useState<Record<string, string>>({});
 
   const handleInputChange = (field: string, value: string) => {
     setFormData(prev => ({ ...prev, [field]: value }));
+    if (errors[field]) {
+      setErrors(prev => ({ ...prev, [field]: "" }));
+    }
+  };
+
+  const validateForm = (): boolean => {
+    const newErrors: Record<string, string> = {};
+
+    const emailError = validateEmail(formData.email);
+    if (emailError) newErrors.email = emailError;
+
+    const passwordError = validateStrongPassword(formData.password);
+    if (passwordError) newErrors.password = passwordError;
+
+    const userTypeError = validateRequired(formData.userType, "User Type");
+    if (userTypeError) newErrors.userType = userTypeError;
+
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
   };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!formData.email || !formData.password || !formData.userType) {
+    if (!validateForm()) {
       toast({
-        title: "Error",
-        description: "Please fill in all fields.",
+        title: "Validation Error",
+        description: "Please fix the errors below and try again.",
         variant: "destructive",
       });
       return;
@@ -79,7 +100,7 @@ const Login = () => {
           <CardContent>
             <form onSubmit={handleSubmit} className="space-y-6">
               <div className="space-y-2">
-                <Label htmlFor="email">Email Address</Label>
+                <Label htmlFor="email">Email Address *</Label>
                 <Input
                   id="email"
                   type="email"
@@ -87,11 +108,13 @@ const Login = () => {
                   onChange={(e) => handleInputChange('email', e.target.value)}
                   placeholder="Enter your email address"
                   required
+                  className={errors.email ? "border-red-500" : ""}
                 />
+                {errors.email && <p className="text-red-500 text-sm">{errors.email}</p>}
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="password">Password</Label>
+                <Label htmlFor="password">Password *</Label>
                 <Input
                   id="password"
                   type="password"
@@ -99,13 +122,15 @@ const Login = () => {
                   onChange={(e) => handleInputChange('password', e.target.value)}
                   placeholder="Enter your password"
                   required
+                  className={errors.password ? "border-red-500" : ""}
                 />
+                {errors.password && <p className="text-red-500 text-sm">{errors.password}</p>}
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="userType">User Type</Label>
+                <Label htmlFor="userType">User Type *</Label>
                 <Select onValueChange={(value) => handleInputChange('userType', value)}>
-                  <SelectTrigger>
+                  <SelectTrigger className={errors.userType ? "border-red-500" : ""}>
                     <SelectValue placeholder="Select user type" />
                   </SelectTrigger>
                   <SelectContent>
@@ -113,6 +138,7 @@ const Login = () => {
                     <SelectItem value="visitor">Visitor</SelectItem>
                   </SelectContent>
                 </Select>
+                {errors.userType && <p className="text-red-500 text-sm">{errors.userType}</p>}
               </div>
 
               <Button type="submit" className="w-full bg-blue-600 hover:bg-blue-700 text-white py-3 text-lg">

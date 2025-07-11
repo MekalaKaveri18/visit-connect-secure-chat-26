@@ -4,13 +4,27 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
-import { AlertTriangle, Search, UserX, Plus, Trash2 } from "lucide-react";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import { AlertTriangle, Search, UserX, Plus, Trash2, Edit } from "lucide-react";
+import { useToast } from "@/hooks/use-toast";
 import Navbar from "@/components/Navbar";
 import Chatbot from "@/components/Chatbot";
 
+interface BlacklistedUser {
+  id: number;
+  name: string;
+  email: string;
+  reason: string;
+  dateAdded: string;
+  addedBy: string;
+}
+
 const Blacklist = () => {
+  const { toast } = useToast();
   const [searchTerm, setSearchTerm] = useState("");
-  const [blacklistedUsers] = useState([
+  const [blacklistedUsers, setBlacklistedUsers] = useState<BlacklistedUser[]>([
     {
       id: 1,
       name: "Michael Johnson",
@@ -37,10 +51,71 @@ const Blacklist = () => {
     },
   ]);
 
+  const [editingUser, setEditingUser] = useState<BlacklistedUser | null>(null);
+  const [newUser, setNewUser] = useState({
+    name: "",
+    email: "",
+    reason: "",
+  });
+  const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
+  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
+
   const filteredUsers = blacklistedUsers.filter(user =>
     user.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
     user.email.toLowerCase().includes(searchTerm.toLowerCase())
   );
+
+  const handleAddUser = () => {
+    if (!newUser.name || !newUser.email || !newUser.reason) {
+      toast({
+        title: "Error",
+        description: "Please fill in all fields.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    const user: BlacklistedUser = {
+      id: Math.max(...blacklistedUsers.map(u => u.id)) + 1,
+      name: newUser.name,
+      email: newUser.email,
+      reason: newUser.reason,
+      dateAdded: new Date().toISOString().split('T')[0],
+      addedBy: "Current Admin",
+    };
+
+    setBlacklistedUsers([...blacklistedUsers, user]);
+    setNewUser({ name: "", email: "", reason: "" });
+    setIsAddDialogOpen(false);
+    
+    toast({
+      title: "Success",
+      description: "User added to blacklist successfully.",
+    });
+  };
+
+  const handleEditUser = () => {
+    if (!editingUser) return;
+
+    setBlacklistedUsers(blacklistedUsers.map(user => 
+      user.id === editingUser.id ? editingUser : user
+    ));
+    setEditingUser(null);
+    setIsEditDialogOpen(false);
+    
+    toast({
+      title: "Success",
+      description: "User details updated successfully.",
+    });
+  };
+
+  const handleDeleteUser = (id: number) => {
+    setBlacklistedUsers(blacklistedUsers.filter(user => user.id !== id));
+    toast({
+      title: "Success",
+      description: "User removed from blacklist.",
+    });
+  };
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100">
@@ -110,10 +185,55 @@ const Blacklist = () => {
                   className="pl-10"
                 />
               </div>
-              <Button className="bg-red-600 hover:bg-red-700">
-                <Plus className="h-4 w-4 mr-2" />
-                Add to Blacklist
-              </Button>
+              <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
+                <DialogTrigger asChild>
+                  <Button className="bg-red-600 hover:bg-red-700">
+                    <Plus className="h-4 w-4 mr-2" />
+                    Add to Blacklist
+                  </Button>
+                </DialogTrigger>
+                <DialogContent>
+                  <DialogHeader>
+                    <DialogTitle>Add User to Blacklist</DialogTitle>
+                    <DialogDescription>
+                      Enter the details of the user to be blacklisted.
+                    </DialogDescription>
+                  </DialogHeader>
+                  <div className="space-y-4">
+                    <div>
+                      <Label htmlFor="name">Name</Label>
+                      <Input
+                        id="name"
+                        value={newUser.name}
+                        onChange={(e) => setNewUser({ ...newUser, name: e.target.value })}
+                        placeholder="Enter full name"
+                      />
+                    </div>
+                    <div>
+                      <Label htmlFor="email">Email</Label>
+                      <Input
+                        id="email"
+                        type="email"
+                        value={newUser.email}
+                        onChange={(e) => setNewUser({ ...newUser, email: e.target.value })}
+                        placeholder="Enter email address"
+                      />
+                    </div>
+                    <div>
+                      <Label htmlFor="reason">Reason</Label>
+                      <Textarea
+                        id="reason"
+                        value={newUser.reason}
+                        onChange={(e) => setNewUser({ ...newUser, reason: e.target.value })}
+                        placeholder="Enter reason for blacklisting"
+                      />
+                    </div>
+                    <Button onClick={handleAddUser} className="w-full">
+                      Add to Blacklist
+                    </Button>
+                  </div>
+                </DialogContent>
+              </Dialog>
             </div>
           </CardContent>
         </Card>
@@ -161,10 +281,62 @@ const Blacklist = () => {
                   </div>
                   
                   <div className="flex space-x-2 ml-4">
-                    <Button variant="outline" size="sm">
-                      Edit
-                    </Button>
-                    <Button variant="destructive" size="sm">
+                    <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
+                      <DialogTrigger asChild>
+                        <Button 
+                          variant="outline" 
+                          size="sm"
+                          onClick={() => setEditingUser(user)}
+                        >
+                          <Edit className="h-4 w-4" />
+                        </Button>
+                      </DialogTrigger>
+                      <DialogContent>
+                        <DialogHeader>
+                          <DialogTitle>Edit Blacklisted User</DialogTitle>
+                          <DialogDescription>
+                            Update the details of the blacklisted user.
+                          </DialogDescription>
+                        </DialogHeader>
+                        {editingUser && (
+                          <div className="space-y-4">
+                            <div>
+                              <Label htmlFor="editName">Name</Label>
+                              <Input
+                                id="editName"
+                                value={editingUser.name}
+                                onChange={(e) => setEditingUser({ ...editingUser, name: e.target.value })}
+                              />
+                            </div>
+                            <div>
+                              <Label htmlFor="editEmail">Email</Label>
+                              <Input
+                                id="editEmail"
+                                type="email"
+                                value={editingUser.email}
+                                onChange={(e) => setEditingUser({ ...editingUser, email: e.target.value })}
+                              />
+                            </div>
+                            <div>
+                              <Label htmlFor="editReason">Reason</Label>
+                              <Textarea
+                                id="editReason"
+                                value={editingUser.reason}
+                                onChange={(e) => setEditingUser({ ...editingUser, reason: e.target.value })}
+                              />
+                            </div>
+                            <Button onClick={handleEditUser} className="w-full">
+                              Update User
+                            </Button>
+                          </div>
+                        )}
+                      </DialogContent>
+                    </Dialog>
+                    <Button 
+                      variant="destructive" 
+                      size="sm"
+                      onClick={() => handleDeleteUser(user.id)}
+                    >
                       <Trash2 className="h-4 w-4" />
                     </Button>
                   </div>
