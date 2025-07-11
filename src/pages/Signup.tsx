@@ -25,7 +25,7 @@ const Signup = () => {
     confirmPassword: "",
     userType: "",
   });
-  const [profileImage, setProfileImage] = useState<string | null>(null);
+  const [capturedImage, setCapturedImage] = useState<string | null>(null);
   const [errors, setErrors] = useState<Record<string, string>>({});
 
   const handleInputChange = (field: string, value: string) => {
@@ -64,9 +64,9 @@ const Signup = () => {
       newErrors.confirmPassword = "Passwords do not match";
     }
 
-    // Validate profile image
-    if (!profileImage) {
-      newErrors.profileImage = "Profile photo is required";
+    // Validate captured image
+    if (!capturedImage) {
+      newErrors.capturedImage = "Photo capture is required";
     }
 
     setErrors(newErrors);
@@ -218,12 +218,12 @@ const Signup = () => {
               </div>
 
               <div className="space-y-4">
-                <Label>Profile Photo *</Label>
+                <Label>Camera Capture *</Label>
                 <CameraCapture 
-                  onCapture={setProfileImage}
-                  capturedImage={profileImage}
+                  onCapture={setCapturedImage}
+                  capturedImage={capturedImage}
                 />
-                {errors.profileImage && <p className="text-red-500 text-sm">{errors.profileImage}</p>}
+                {errors.capturedImage && <p className="text-red-500 text-sm">{errors.capturedImage}</p>}
               </div>
 
               <Button type="submit" className="w-full bg-blue-600 hover:bg-blue-700 text-white py-3 text-lg">
